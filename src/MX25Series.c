@@ -1,5 +1,5 @@
 /*
- * c-MX25Series is an C Library for the Macronix MX25R6435F flash chip.
+ * c-MX25Series is an C Library for the Macronix MX25-Series flash chips.
  * Copyright (C) 2021 eResearch, James Cook University
  * Author: NigelB
  *
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Repository: https://github.com/jcu-eresearch/c-MX25R6435F
+ * Repository: https://github.com/jcu-eresearch/c-MX25-Series
  *
  */
 
