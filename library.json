@@ -1,13 +1,13 @@
 {
-  "name": "c-MX25xxxYY",
+  "name": "c-MX25-Series",
   "version": "0.0.1",
-  "description": "A C library to drive the Macronix MX25R6435F Flash Chip.",
+  "description": "A C library to drive the Macronix MX25-Series Flash Chips.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jcu-eresearch/c-MX25xxxYY.git"
+    "url": "https://github.com/jcu-eresearch/c-MX25-Series.git"
   },
   "keywords": [
-    "flash"
+    "Data Storage"
   ],
   "authors": [
     {
