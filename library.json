@@ -1,0 +1,29 @@
+{
+  "name": "c-MX25xxxYY",
+  "version": "0.0.1",
+  "description": "A C library to drive the Macronix MX25R6435F Flash Chip.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jcu-eresearch/c-MX25xxxYY.git"
+  },
+  "keywords": [
+    "flash"
+  ],
+  "authors": [
+    {
+      "name": "NigelB"
+    }
+  ],
+  "frameworks": [
+    "*"
+  ],
+
+  "license": "GPL-3.0",
+  "build": {
+    "libArchive": false,
+    "srcFilter": [
+      "+<*.c>",
+      "+<*.h>"
+    ]
+  }
+}
