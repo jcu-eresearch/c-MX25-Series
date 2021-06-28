@@ -23,18 +23,63 @@
 #include "MX25xxxYY.h"
 #include "stdio.h"
 
-MX25xxxYY_status_enum_t MX25xxxYY_init(MX25xxxYY_t *dev, uint8_t cs_pin, uint8_t reset_pin, uint8_t wp_pin, uint8_t transfer_dummy_byte, void* ctx)
+MX25xxxYY_Chip_Info_t MX25R6435F_Chip_Def_Low_Power = {
+        .manufacturer_id=MX25R6435F_MANUFACTURER_ID,
+        .memory_type=MX25R6435F_MEMORY_TYPE,
+        .memory_density=MX25R6435F_MEMORY_DENSITY,
+        .memory_size=MX25R6435F_MEMORY_SIZE,
+        .page_size=MX25R6435F_PAGE_SIZE,
+        .timing = {
+                .tBP=MX25R6435F_tBP_LP,
+                .tPP=MX25R6435F_tPP_LP,
+                .tSE=MX25R6435F_tSE_LP,
+                .tBE32K=MX25R6435F_tBE32K_LP,
+                .tBE64K=MX25R6435F_tBE64K_LP,
+                .tCE=MX25R6435F_tCE_LP,
+                .tWSR=MX25R6435F_tW_LP,
+                .tUNKNOWN=MX25xxxYY_tUNKNOWN_TIMING
+        },
+        .name="MX25R6435F"
+};
+
+MX25xxxYY_Chip_Info_t MX25R6435F_Chip_Def_High_Performance = {
+        .manufacturer_id=MX25R6435F_MANUFACTURER_ID,
+        .memory_type=MX25R6435F_MEMORY_TYPE,
+        .memory_density=MX25R6435F_MEMORY_DENSITY,
+        .memory_size=MX25R6435F_MEMORY_SIZE,
+        .page_size=MX25R6435F_PAGE_SIZE,
+        .timing = {
+                .tBP=MX25R6435F_tBP_HP,
+                .tPP=MX25R6435F_tPP_HP,
+                .tSE=MX25R6435F_tSE_HP,
+                .tBE32K=MX25R6435F_tBE32K_HP,
+                .tBE64K=MX25R6435F_tBE64K_HP,
+                .tCE=MX25R6435F_tCE_HP,
+                .tWSR=MX25R6435F_tW_HP,
+                .tUNKNOWN=MX25xxxYY_tUNKNOWN_TIMING
+        },
+        .name="MX25R6435F"
+};
+
+
+MX25xxxYY_status_enum_t MX25xxxYY_init(MX25xxxYY_t *dev, MX25xxxYY_Chip_Info_t *chip_def, uint8_t cs_pin, uint8_t reset_pin, uint8_t wp_pin, uint8_t transfer_dummy_byte, void* ctx)
 {
     memset(dev, 0, sizeof(MX25xxxYY_t));
     dev->cs_pin = cs_pin;
     dev->reset_pin = reset_pin;
-    dev->wp_pin - wp_pin;
+    dev->wp_pin = wp_pin;
     dev->transfer_dummy_byte = transfer_dummy_byte;
     dev->ctx = ctx;
+    dev->chip_def = chip_def;
 
     MX25xxxYY___enable_cs_pin(dev, false);
     MX25xxxYY___enable_reset_pin(dev, false);
     MX25xxxYY___enable_write_protect_pin(dev, false);
+
+    if(dev->chip_def == NULL)
+    {
+        return MX25xxxYY_status_error_invalid_chip_def;
+    }
 
     return MX25xxxYY_status_ok;
 }
@@ -47,10 +92,26 @@ MX25xxxYY_status_enum_t MX25xxxYY_read_identification(MX25xxxYY_t *dev, int *man
     MX25xxxYY___enable_cs_pin(dev, true);
     result = MX25xxxYY___issue_command(dev, MX25xxxYY_Command_RDID);
     result |= MX25xxxYY___read(dev, 3, value);
+    MX25xxxYY___enable_cs_pin(dev, false);
+
     *manufacturer_id = value[0];
     *memory_type = value[1];
     *memory_density = value[2];
-    MX25xxxYY___enable_cs_pin(dev, false);
+
+    if(dev->chip_def == NULL)
+    {
+        return MX25xxxYY_status_error_invalid_chip_def;
+    }
+
+    if(
+            value[0] != dev->chip_def->manufacturer_id &&
+            value[1] != dev->chip_def->memory_type &&
+            value[2] != dev->chip_def->memory_density
+    )
+    {
+        return MX25xxxYY_status_error_incorrect_ids;
+    }
+
     return result;
 }
 
@@ -235,19 +296,41 @@ MX25xxxYY_status_enum_t MX25xxxYY_erase(
     return result;
 }
 
-char* MX25xxxYY_get_erasure_size_string(MX25xxxYY_Erase_enum_t size)
+const char* MX25xxxYY_get_erasure_size_string(MX25xxxYY_Erase_enum_t size)
 {
     switch(size)
     {
-        case MX25xxxYY_Erase_Block_4K: return "4 KB"; break;
-        case MX25xxxYY_Erase_Block_32K: return "32 KB"; break;
-        case MX25xxxYY_Erase_Block_64K: return "64 KB"; break;
-        case MX25xxxYY_Erase_Chip: return "Entire Chip"; break;
+        case MX25xxxYY_Erase_Block_4K: {return "4 KB";} break;
+        case MX25xxxYY_Erase_Block_32K: {return "32 KB";} break;
+        case MX25xxxYY_Erase_Block_64K: {return "64 KB";} break;
+        case MX25xxxYY_Erase_Chip: {return "Entire Chip";} break;
         case MX25xxxYY_Erase_Undefined:
-        default:
-            return "Undefined";
+        default: {return "Undefined";}
     }
     return "Undefined";
+}
+
+uint32_t MX25xxxYY_get_erasure_max_time(MX25xxxYY_t *dev, MX25xxxYY_Erase_enum_t erase_type)
+{
+    switch(erase_type)
+    {
+        case MX25xxxYY_Erase_Block_4K:
+            return dev->chip_def->timing.tSE;
+            break;
+        case MX25xxxYY_Erase_Block_32K:
+            return dev->chip_def->timing.tBE32K;
+            break;
+        case MX25xxxYY_Erase_Block_64K:
+            return dev->chip_def->timing.tBE64K;
+            break;
+        case MX25xxxYY_Erase_Chip:
+            return dev->chip_def->timing.tCE;
+            break;
+        case MX25xxxYY_Erase_Undefined:
+        default:
+            return dev->chip_def->timing.tUNKNOWN;
+    }
+    return dev->chip_def->timing.tUNKNOWN;
 }
 
 MX25xxxYY_status_enum_t MX25xxxYY_read_security_register(
@@ -271,7 +354,6 @@ MX25xxxYY_status_enum_t MX25xxxYY_write_security_register(
 
     return result;
 }
-
 
 __attribute__((weak)) MX25xxxYY_status_enum_t MX25xxxYY___issue_command(MX25xxxYY_t *dev, MX25xxxYY_COMMAND_enum_t command)
 {
@@ -309,6 +391,11 @@ __attribute__((weak)) bool MX25xxxYY___test_linker(MX25xxxYY_t *dev)
 {
     dev->state = 0xFFFFFFF6;
     return false;
+}
+
+__attribute__((weak)) void MX25xxxYY___delay_micro_second(MX25xxxYY_t *dev, unsigned int us)
+{
+    dev->state = 0xFFFFFFF8;
 }
 
 

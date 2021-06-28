@@ -84,7 +84,10 @@ typedef enum
     MX25xxxYY_status_error = 2,
     MX25xxxYY_status_ok = 4,
 
-    MX25xxxYY_status_error_timeout = 8 | MX25xxxYY_status_error,
+    MX25xxxYY_status_error_timeout =          (   0b1000 | MX25xxxYY_status_error),
+    MX25xxxYY_status_error_incorrect_ids =    (  0b10000 | MX25xxxYY_status_error),
+    MX25xxxYY_status_error_invalid_chip_def = ( 0b100000 | MX25xxxYY_status_error),
+
 } MX25xxxYY_status_enum_t;
 
 
@@ -210,7 +213,56 @@ Low Power mode or High Performance mode. Please check Ordering Information for t
 support. */
 #define MX25xxxYY_CR_LH  (1ul << 1ul)
 
-#define MX25xxxYY_PAGE_SIZE 256
+#ifndef MX25xxxYY_tUNKNOWN_TIMING
+    #define MX25xxxYY_tUNKNOWN_TIMING 5000000
+#endif
+
+// These are the Max values in micro-seconds. From Page 69 of the Datasheet.
+#define MX25R6435F_MANUFACTURER_ID     0xC2
+#define MX25R6435F_MEMORY_TYPE         0x28
+#define MX25R6435F_MEMORY_DENSITY      0x17
+#define MX25R6435F_MEMORY_SIZE     0x800000 /**< 8 MB */
+#define MX25R6435F_PAGE_SIZE            256 /**! 256 bytes, Page Size */
+
+#define MX25R6435F_tBP_LP               100 /**! 100 micro-seconds, Low Power Byte-Program Max Time */
+#define MX25R6435F_tPP_LP             10000 /**! 10 milli-seconds, Low Power Page Program Max Time */
+#define MX25R6435F_tSE_LP            240000 /**! 240 milli-seconds, Low Power Sector Erase Max Time */
+#define MX25R6435F_tBE32K_LP        3000000 /**! 3 seconds, Low Power 32KB Block Erase Max Time */
+#define MX25R6435F_tBE64K_LP        3500000 /**! 3.5 seconds, Low Power 64KB Block Erase Max Time */
+#define MX25R6435F_tCE_LP         240000000 /**! 240 seconds, Low Power Chip Erase Max Time */
+#define MX25R6435F_tW_LP              30000 /**! 20 milli-seconds. Low Power Write Status Register Cycle Time */
+
+#define MX25R6435F_tBP_HP               100 /**! 100 micro-seconds, High Performance Byte-Program Max Time */
+#define MX25R6435F_tPP_HP             10000 /**! 10 milli-seconds, High Performance Page Program Max Time */
+#define MX25R6435F_tSE_HP            240000 /**! 240 milli-seconds, High Performance Sector Erase Max Time */
+#define MX25R6435F_tBE32K_HP        1500000 /**! 1.5 seconds, High Performance 32KB Block Erase Max Time */
+#define MX25R6435F_tBE64K_HP        3000000 /**! 3 seconds, High Performance 64KB Block Erase Max Time */
+#define MX25R6435F_tCE_HP         150000000 /**! 150 seconds, High Performance Chip Erase Max Time */
+#define MX25R6435F_tW_HP              20000 /**! 20 milli-seconds. High Performance Write Status Register Cycle Time */
+
+
+typedef struct
+{
+    uint8_t manufacturer_id;
+    uint8_t memory_type;
+    uint8_t memory_density;
+    uint32_t memory_size;
+    uint32_t page_size;
+    struct{
+        uint32_t tBP;      /**! Byte-Program Max Time */
+        uint32_t tPP;      /**! Page Program Max Time */
+        uint32_t tSE;      /**! Sector Erase Max Time */
+        uint32_t tBE32K;   /**! 32KB Block Erase Max Time */
+        uint32_t tBE64K;   /**! 64KB Block Erase Max Time */
+        uint32_t tCE;      /**! Chip Erase Max Time */
+        uint32_t tWSR;     /**! Status Register Write Max Time */
+        uint32_t tUNKNOWN; /**! Unknown Operation Max Time */
+    }timing;
+    char name[20];
+}MX25xxxYY_Chip_Info_t;
+
+extern MX25xxxYY_Chip_Info_t MX25R6435F_Chip_Def_Low_Power;
+extern MX25xxxYY_Chip_Info_t MX25R6435F_Chip_Def_High_Performance;
 
 typedef struct
 {
@@ -219,6 +271,7 @@ typedef struct
     uint8_t wp_pin;
     uint8_t transfer_dummy_byte;
     int state;
+    MX25xxxYY_Chip_Info_t *chip_def;
     void* ctx;
 } MX25xxxYY_t;
 
@@ -229,8 +282,9 @@ typedef struct
  * @param reset_pin The pin to use for the Reset pin
  * @param transfer_dummy_byte a byte to use as a dummy byte for SPI transfers.
  * @param ctx a void* pointer that can be used by the implementation functions for context specific operations.
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
-MX25xxxYY_status_enum_t MX25xxxYY_init(MX25xxxYY_t *dev, uint8_t cs_pin, uint8_t reset_pin, uint8_t wp_pin, uint8_t transfer_dummy_byte, void* ctx);
+MX25xxxYY_status_enum_t MX25xxxYY_init(MX25xxxYY_t *dev, MX25xxxYY_Chip_Info_t *chip_def, uint8_t cs_pin, uint8_t reset_pin, uint8_t wp_pin, uint8_t transfer_dummy_byte, void* ctx);
 
 /**
  * MX25xxxYY_read_identification issues the RDID command to the chip
@@ -240,6 +294,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_init(MX25xxxYY_t *dev, uint8_t cs_pin, uint8_t
  * @param manufacturer_id
  * @param memory_type
  * @param memory_density
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_read_identification(MX25xxxYY_t *dev, int *manufacturer_id, int *memory_type, int *memory_density);
 
@@ -249,6 +304,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_read_identification(MX25xxxYY_t *dev, int *man
  *
  * @param dev the device structure for the MX25xxxYY chip.
  * @param electronic_id
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_read_electronic_signature(MX25xxxYY_t *dev, int *electronic_id);
 
@@ -259,6 +315,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_read_electronic_signature(MX25xxxYY_t *dev, in
  * @param dev the device structure for the MX25xxxYY chip.
  * @param manufacturer_id
  * @param memory_type
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_read_manufacture_and_device_id(MX25xxxYY_t *dev, int *manufacturer_id, int *memory_type);
 
@@ -266,6 +323,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_read_manufacture_and_device_id(MX25xxxYY_t *de
   * MX25xxxYY_read_status_register
   * @param dev the device structure for the MX25xxxYY chip.
   * @param status_register see datasheet page 30 for data fields
+  * @return a MX25xxxYY_status_enum_t indication success or error codes.
   */
  MX25xxxYY_status_enum_t MX25xxxYY_read_status_register(MX25xxxYY_t *dev, uint8_t *status_register);
 
@@ -273,6 +331,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_read_manufacture_and_device_id(MX25xxxYY_t *de
  * MX25xxxYY_read_configuration_register
  * @param dev the device structure for the MX25xxxYY chip.
  * @param configuration_register see datasheet page 31 for register fields.
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_read_configuration_register(MX25xxxYY_t *dev, uint16_t *configuration_register);
 
@@ -281,7 +340,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_read_configuration_register(MX25xxxYY_t *dev, 
  * @param dev the device structure for the MX25xxxYY chip.
  * @param status_register the value to write to the status register
  * @param configuration_register the value to write to the configuration register
- * @return
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_configure_chip(
         MX25xxxYY_t *dev,
@@ -293,6 +352,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_configure_chip(
  * MX25xxxYY_set_write_enable
  * @param dev the device structure for the MX25xxxYY chip.
  * @param enable - true to issue WREN false to issue WRDI
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_set_write_enable(MX25xxxYY_t *dev, bool enable);
 
@@ -303,7 +363,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_set_write_enable(MX25xxxYY_t *dev, bool enable
  * @param memory_address the 24-bit memory address to read from.
  * @param length the number of bytes to read.
  * @param buffer the buffer in which to store the read data.
- * @return
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_read_stored_data(
         MX25xxxYY_t *dev,
@@ -318,7 +378,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_read_stored_data(
  * @param memory_address
  * @param length
  * @param buffer
- * @return
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_write_stored_data(
         MX25xxxYY_t *dev,
@@ -331,7 +391,7 @@ MX25xxxYY_status_enum_t MX25xxxYY_write_stored_data(
  * @param dev the device structure for the MX25xxxYY chip.
  * @param erase_type the scope of the erasure, a 4KB block, 32KB area, 64KB area or the entire chip.
  * @param memory_address Any address that falls within the specified block will select that block for erasure. Except for Chip Erasure which erases the entire chip.
- * @return
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
  */
 MX25xxxYY_status_enum_t MX25xxxYY_erase(
         MX25xxxYY_t *dev,
@@ -343,7 +403,15 @@ MX25xxxYY_status_enum_t MX25xxxYY_erase(
  * @param size the MX25xxxYY_Erase_enum_t to get the string representation of.
  * @return the string representation of size
  */
-char* MX25xxxYY_get_erasure_size_string(MX25xxxYY_Erase_enum_t size);
+const char* MX25xxxYY_get_erasure_size_string(MX25xxxYY_Erase_enum_t size);
+
+/**
+ * MX25xxxYY_get_erasure_max_time returns the appropriate value from the MX25xxxYY_t.chip_def timing section for the provided erase_type.
+ * @param dev the device structure for the MX25xxxYY chip.
+ * @param erase_type the MX25xxxYY_Erase_enum_t type for which to retrieve the timing value of.
+ * @return the maximum number of micro-seconds required for the specified erasure operation.
+ */
+uint32_t MX25xxxYY_get_erasure_max_time(MX25xxxYY_t *dev, MX25xxxYY_Erase_enum_t erase_type);
 
 MX25xxxYY_status_enum_t MX25xxxYY_read_security_register(
         MX25xxxYY_t *dev,
@@ -353,14 +421,65 @@ MX25xxxYY_status_enum_t MX25xxxYY_write_security_register(
         MX25xxxYY_t *dev,
         uint8_t *security_register);
 
+// These function implement the platform specific functionality required by this library.
+// __attribute__((weak)) implementations of these functions are provided so that this
+// library can compile. Any program making use of this library must provide implementations
+// of these function that perform the required actions on the specific platform.
 
-
+/**
+ * MX25xxxYY___issue_command write the provided command out on the relevant SPI bus
+ * @param dev the device structure for the MX25xxxYY chip.
+ * @param command the MX25xxxYY_COMMAND_enum_t to issue.
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
+ */
 MX25xxxYY_status_enum_t MX25xxxYY___issue_command(MX25xxxYY_t *dev, MX25xxxYY_COMMAND_enum_t command);
+
+/**
+ * MX25xxxYY___read reads length bytes from the relevant SPI bus into buffer
+ * @param dev the device structure for the MX25xxxYY chip.
+ * @param length the size of the provided buffer
+ * @param buffer the buffer to read bytes into
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
+ */
 MX25xxxYY_status_enum_t MX25xxxYY___read(MX25xxxYY_t *dev, size_t length, uint8_t* buffer);
+
+/**
+ * MX25xxxYY___write writes length bytes from buffer to the relevant SPI bus
+ * @param dev the device structure for the MX25xxxYY chip.
+ * @param length the size of the provided buffer
+ * @param buffer the data to write to the relevant SPI bus
+ * @return a MX25xxxYY_status_enum_t indication success or error codes.
+ */
 MX25xxxYY_status_enum_t MX25xxxYY___write(MX25xxxYY_t *dev, size_t length, uint8_t* buffer);
+
+/**
+ * MX25xxxYY___enable_cs_pin asserts the active low CS pin
+ * @param dev the device structure for the MX25xxxYY chip.
+ * @param value true->RESET-> LOW, false->RESET->HIGH
+ */
 void                    MX25xxxYY___enable_cs_pin(MX25xxxYY_t *dev, bool value);
+
+/**
+ * MX25xxxYY___enable_reset_pin asserts the active low RESET pin
+ * @param dev the device structure for the MX25xxxYY chip.
+ * @param value true->RESET-> LOW, false->RESET->HIGH
+ */
 void                    MX25xxxYY___enable_reset_pin(MX25xxxYY_t *dev, bool value);
+
+/**
+ * MX25xxxYY___enable_write_protect_pin asserts the active low WP pin
+ * @param dev the device structure for the MX25xxxYY chip.
+ * @param value true->RESET-> LOW, false->RESET->HIGH
+ */
 void                    MX25xxxYY___enable_write_protect_pin(MX25xxxYY_t *dev, bool value);
+
+/**
+ *  MX25xxxYY___test_linker returns FALSE. A library providing the platform specific implementation functions needs
+ *  to provide one for MX25xxxYY___test_linker that returns TRUE. This enables the library to detect if there has
+ *  been an issue linking the two libraries together.
+ * @param dev the device structure for the MX25xxxYY chip.
+ * @return
+ */
 bool                    MX25xxxYY___test_linker(MX25xxxYY_t *dev);
 
 #if defined(__cplusplus)
