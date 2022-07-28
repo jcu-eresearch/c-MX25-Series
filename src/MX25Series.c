@@ -355,48 +355,48 @@ MX25Series_status_enum_t MX25Series_write_security_register(
     return result;
 }
 
-__attribute__((weak)) MX25Series_status_enum_t MX25Series___issue_command(MX25Series_t *dev, MX25Series_COMMAND_enum_t command)
-{
-    return MX25Series_status_error;
-}
+// __attribute__((weak)) MX25Series_status_enum_t MX25Series___issue_command(MX25Series_t *dev, MX25Series_COMMAND_enum_t command)
+// {
+//     return MX25Series_status_error;
+// }
 
-__attribute__((weak)) MX25Series_status_enum_t MX25Series___read(MX25Series_t *dev, size_t length, uint8_t* buffer)
-{
-    dev->state = 0xFFFFFFF1;
-    return MX25Series_status_error;
-}
+// __attribute__((weak)) MX25Series_status_enum_t MX25Series___read(MX25Series_t *dev, size_t length, uint8_t* buffer)
+// {
+//     dev->state = 0xFFFFFFF1;
+//     return MX25Series_status_error;
+// }
 
-__attribute__((weak)) MX25Series_status_enum_t MX25Series___write(MX25Series_t *dev, size_t length, uint8_t* buffer)
-{
-    dev->state = 0xFFFFFFF2;
-    return MX25Series_status_error;
-}
+// __attribute__((weak)) MX25Series_status_enum_t MX25Series___write(MX25Series_t *dev, size_t length, uint8_t* buffer)
+// {
+//     dev->state = 0xFFFFFFF2;
+//     return MX25Series_status_error;
+// }
 
-__attribute__((weak)) void MX25Series___enable_cs_pin(MX25Series_t *dev, bool value)
-{
-    dev->state = 0xFFFFFFF3;
-}
+// __attribute__((weak)) void MX25Series___enable_cs_pin(MX25Series_t *dev, bool value)
+// {
+//     dev->state = 0xFFFFFFF3;
+// }
 
-__attribute__((weak)) void MX25Series___enable_reset_pin(MX25Series_t *dev, bool value)
-{
-    dev->state = 0xFFFFFFF4;
-}
+// __attribute__((weak)) void MX25Series___enable_reset_pin(MX25Series_t *dev, bool value)
+// {
+//     dev->state = 0xFFFFFFF4;
+// }
 
-__attribute__((weak)) void MX25Series___enable_write_protect_pin(MX25Series_t *dev, bool value)
-{
-    dev->state = 0xFFFFFFF5;
-}
+// __attribute__((weak)) void MX25Series___enable_write_protect_pin(MX25Series_t *dev, bool value)
+// {
+//     dev->state = 0xFFFFFFF5;
+// }
 
-__attribute__((weak)) bool MX25Series___test_linker(MX25Series_t *dev)
-{
-    dev->state = 0xFFFFFFF6;
-    return false;
-}
+// __attribute__((weak)) bool MX25Series___test_linker(MX25Series_t *dev)
+// {
+//     dev->state = 0xFFFFFFF6;
+//     return false;
+// }
 
-__attribute__((weak)) void MX25Series___delay_micro_second(MX25Series_t *dev, unsigned int us)
-{
-    dev->state = 0xFFFFFFF8;
-}
+// __attribute__((weak)) void MX25Series___delay_micro_second(MX25Series_t *dev, unsigned int us)
+// {
+//     dev->state = 0xFFFFFFF8;
+// }
 
 
 

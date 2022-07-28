@@ -84,9 +84,10 @@ typedef enum
     MX25Series_status_error = 2,
     MX25Series_status_ok = 4,
 
-    MX25Series_status_error_timeout =          (   0b1000 | MX25Series_status_error),
-    MX25Series_status_error_incorrect_ids =    (  0b10000 | MX25Series_status_error),
-    MX25Series_status_error_invalid_chip_def = ( 0b100000 | MX25Series_status_error),
+    MX25Series_status_error_timeout =          (    0b1000 | MX25Series_status_error),
+    MX25Series_status_error_incorrect_ids =    (   0b10000 | MX25Series_status_error),
+    MX25Series_status_error_invalid_chip_def = (  0b100000 | MX25Series_status_error),
+    MX25Series_status_error_ctx_nullptr =      ( 0b1000000 | MX25Series_status_error),
 
 } MX25Series_status_enum_t;
 
